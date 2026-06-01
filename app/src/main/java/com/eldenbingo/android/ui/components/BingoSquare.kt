@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +32,7 @@ fun BingoSquare(
     onCounterChange: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDialog by rememberSaveable { mutableStateOf(false) }
     val isSpectator = myTeam == -1
     val checkedTeams = square.team.toList()
     val isMyTeamChecked = !isSpectator && square.team.contains(myTeam)
@@ -81,7 +83,8 @@ fun BingoSquare(
             )
             .combinedClickable(
                 onClick = { onCheck(index) },
-                onLongClick = { onMark(index) }
+                onLongClick = { onMark(index) },
+                onDoubleClick = { showDialog = true }
             )
             .padding(4.dp),
         contentAlignment = Alignment.Center
@@ -134,6 +137,63 @@ fun BingoSquare(
                 }
             }
         }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = {
+                Text(
+                    text = square.text,
+                    color = EldenGold,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column {
+                    if (square.tooltip.isNotBlank()) {
+                        Text(
+                            text = square.tooltip,
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Counter Controls
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Your Team Counter:", color = EldenGold, fontSize = 14.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { onCounterChange(index, -1) }) {
+                                Text("-", color = EldenGold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            }
+                            val myCounter = square.counters.find { it.team == myTeam }?.counter ?: 0
+                            Text(
+                                text = "$myCounter",
+                                color = Color.White,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                            IconButton(onClick = { onCounterChange(index, 1) }) {
+                                Text("+", color = EldenGold, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Close", color = EldenGold)
+                }
+            },
+            containerColor = Color(0xFF2D2D2D)
+        )
     }
 }
 
