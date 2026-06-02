@@ -1,6 +1,7 @@
 package com.eldenbingo.android
 
 import android.app.Activity
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
@@ -25,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +36,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.eldenbingo.android.audio.AndroidSoundPlayer
+import com.eldenbingo.android.data.model.BingoConstants
 import com.eldenbingo.android.data.model.MatchStatus
 import com.eldenbingo.android.ui.navigation.Screen
 import com.eldenbingo.android.ui.screens.admin.AdminScreen
@@ -92,6 +95,18 @@ fun EldenBingoMain(
 
     val localUser = viewModel.localUser
     val isInRoom = roomState.name.isNotEmpty()
+    var autoConnectAttempted by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(connectionState, autoConnectAttempted) {
+        if (!autoConnectAttempted && connectionState is com.eldenbingo.android.data.network.EldenBingoClient.ConnectionState.Disconnected) {
+            val prefs = context.getSharedPreferences("connect_inputs", Context.MODE_PRIVATE)
+            val address = prefs.getString("server_address", "bingocard.bingobrawlers.com") ?: "bingocard.bingobrawlers.com"
+            val portString = prefs.getString("server_port", BingoConstants.DEFAULT_PORT.toString()) ?: BingoConstants.DEFAULT_PORT.toString()
+            val port = portString.toIntOrNull() ?: BingoConstants.DEFAULT_PORT
+            autoConnectAttempted = true
+            viewModel.connect(address, port)
+        }
+    }
 
     DisposableEffect(isInRoom) {
         val activity = context as? Activity
