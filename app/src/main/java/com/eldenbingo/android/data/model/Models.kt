@@ -70,7 +70,7 @@ data class BingoBoard(
 data class BingoGameSettings(
     val boardSize: Int = 5,
     val lockout: Boolean = false,
-    val randomClasses: Boolean = true,
+    val randomClasses: Boolean = false,
     val validClasses: Set<EldenRingClasses> = EldenRingClasses.entries.toSet(),
     val numberOfClasses: Int = 2,
     val categoryLimit: Int = 2,

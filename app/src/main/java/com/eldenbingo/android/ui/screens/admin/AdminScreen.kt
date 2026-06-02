@@ -1,5 +1,8 @@
 package com.eldenbingo.android.ui.screens.admin
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,12 +12,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.eldenbingo.android.data.model.BingoGameSettings
 import com.eldenbingo.android.data.model.EldenRingClasses
 import com.eldenbingo.android.data.model.MatchStatus
@@ -31,17 +38,30 @@ fun AdminScreen(
     onTogglePause: () -> Unit,
     onRandomizeBoard: () -> Unit,
     onUpdateSettings: (BingoGameSettings) -> Unit,
+    onUploadBingoJson: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var boardSize by remember { mutableIntStateOf(gameSettings?.boardSize ?: 5) }
-    var lockout by remember { mutableStateOf(gameSettings?.lockout ?: false) }
-    var randomClasses by remember { mutableStateOf(gameSettings?.randomClasses ?: true) }
-    var numClasses by remember { mutableIntStateOf(gameSettings?.numberOfClasses ?: 2) }
-    var categoryLimit by remember { mutableIntStateOf(gameSettings?.categoryLimit ?: 2) }
-    var preparationTime by remember { mutableIntStateOf(gameSettings?.preparationTime ?: 0) }
-    var pointsPerBingo by remember { mutableIntStateOf(gameSettings?.pointsPerBingoLine ?: 1) }
-    var randomSeed by remember { mutableIntStateOf(gameSettings?.randomSeed ?: 0) }
+    var boardSize by rememberSaveable(gameSettings) { mutableIntStateOf(gameSettings?.boardSize ?: 5) }
+    var lockout by rememberSaveable(gameSettings) { mutableStateOf(gameSettings?.lockout ?: false) }
+    var randomClasses by rememberSaveable(gameSettings) { mutableStateOf(gameSettings?.randomClasses ?: false) }
+    var numClasses by rememberSaveable(gameSettings) { mutableIntStateOf(gameSettings?.numberOfClasses ?: 2) }
+    var categoryLimit by rememberSaveable(gameSettings) { mutableIntStateOf(gameSettings?.categoryLimit ?: 2) }
+    var preparationTime by rememberSaveable(gameSettings) { mutableIntStateOf(gameSettings?.preparationTime ?: 0) }
+    var pointsPerBingo by rememberSaveable(gameSettings) { mutableIntStateOf(gameSettings?.pointsPerBingoLine ?: 1) }
+    var randomSeed by rememberSaveable(gameSettings) { mutableIntStateOf(gameSettings?.randomSeed ?: 0) }
+    var selectedBingoJsonUri by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedBingoJsonName by rememberSaveable { mutableStateOf<String?>(null) }
+    var bingoJsonError by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val bingoJsonPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        if (uri != null) {
+            selectedBingoJsonUri = uri.toString()
+            selectedBingoJsonName = uri.path?.substringAfterLast('/') ?: uri.toString()
+            bingoJsonError = null
+        }
+    }
 
     val isMatchRunning = matchStatus == MatchStatus.Running ||
             matchStatus == MatchStatus.Starting ||
@@ -258,6 +278,67 @@ fun AdminScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D2D)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Bingo JSON", color = EldenGold, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                selectedBingoJsonName ?: "No file selected",
+                                color = if (selectedBingoJsonName != null) Color.White else Color.Gray,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { bingoJsonPicker.launch(arrayOf("application/json", "text/json", "*/*")) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Browse JSON")
+                                }
+                                Button(
+                                    onClick = {
+                                        val uriString = selectedBingoJsonUri
+                                        if (uriString == null) {
+                                            bingoJsonError = "Select a JSON file first"
+                                            return@Button
+                                        }
+                                        bingoJsonError = null
+                                        val uri = Uri.parse(uriString)
+                                        coroutineScope.launch(Dispatchers.IO) {
+                                            try {
+                                                val json = context.contentResolver.openInputStream(uri)
+                                                    ?.bufferedReader()
+                                                    ?.use { it.readText() }
+                                                if (json.isNullOrBlank()) {
+                                                    bingoJsonError = "Unable to read JSON file"
+                                                } else {
+                                                    onUploadBingoJson(json)
+                                                }
+                                            } catch (ex: Exception) {
+                                                bingoJsonError = ex.message ?: "Failed to read JSON"
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Upload JSON")
+                                }
+                            }
+                            if (!bingoJsonError.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(bingoJsonError ?: "", color = Color.Red)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     Button(
                         onClick = {
                             onUpdateSettings(
@@ -273,6 +354,7 @@ fun AdminScreen(
                                     pointsPerBingoLine = pointsPerBingo
                                 )
                             )
+                            onBack()
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = EldenGold)

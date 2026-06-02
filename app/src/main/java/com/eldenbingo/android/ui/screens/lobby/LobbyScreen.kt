@@ -37,6 +37,7 @@ fun LobbyScreen(
     onTogglePause: () -> Unit,
     onStartMatch: () -> Unit,
     onStopMatch: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onNavigateToBingo: () -> Unit,
     onNavigateToChat: () -> Unit,
     onNavigateToMap: () -> Unit,
@@ -91,6 +92,11 @@ fun LobbyScreen(
                 containerColor = Color(0xFF2D2D2D)
             ),
             actions = {
+                if (isAdmin) {
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, "Lobby Settings", tint = EldenGold)
+                    }
+                }
                 IconButton(onClick = onNavigateToBingo) {
                     Icon(Icons.Default.GridOn, "Bingo Card", tint = EldenGold)
                 }

@@ -57,6 +57,16 @@ class EldenBingoClient {
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
 
+    fun addSystemChatMessage(message: String) {
+        val chatMsg = ChatMessage(
+            userGuid = UUID(0, 0),
+            userName = "[SYSTEM]",
+            message = message,
+            team = -1
+        )
+        _chatMessages.value = _chatMessages.value + chatMsg
+    }
+
     private val _playerPositions = MutableStateFlow<Map<UUID, PlayerPosition>>(emptyMap())
     val playerPositions: StateFlow<Map<UUID, PlayerPosition>> = _playerPositions.asStateFlow()
 
@@ -543,6 +553,7 @@ class EldenBingoClient {
 
         localUser = users.find { it.guid == clientGuid }
         _statusMessage.value = "Joined lobby: $roomName"
+        addSystemChatMessage("Joined lobby: $roomName")
     }
 
     private fun handleJoinRoomDenied(map: Map<String, Value>) {
@@ -561,6 +572,7 @@ class EldenBingoClient {
         val currentUsers = _roomState.value.users.toMutableList()
         currentUsers.add(user)
         _roomState.value = _roomState.value.copy(users = currentUsers)
+        addSystemChatMessage("${user.nick} joined the lobby")
     }
 
     private fun handleUserLeftRoom(map: Map<String, Value>) {
@@ -568,6 +580,7 @@ class EldenBingoClient {
         val user = parseUserFromMap(userMap.mapKeys { it.key.asStringValue().asString() }) ?: return
         val currentUsers = _roomState.value.users.filter { it.guid != user.guid }
         _roomState.value = _roomState.value.copy(users = currentUsers)
+        addSystemChatMessage("${user.nick} left the lobby")
     }
 
     private fun handleUserChat(map: Map<String, Value>) {
@@ -586,11 +599,22 @@ class EldenBingoClient {
     }
 
     private fun handleMatchStatusUpdate(map: Map<String, Value>) {
+        val previousStatus = _roomState.value.matchStatus
+        val previousPaused = _roomState.value.paused
         val matchStatusStr = map["MatchStatus"]?.asIntegerValue()?.asInt() ?: 0
         val paused = map["Paused"]?.asBooleanValue()?.boolean ?: false
         val timer = map["Timer"]?.asIntegerValue()?.asInt() ?: 0
         val matchStatus = MatchStatus.entries.getOrNull(matchStatusStr) ?: MatchStatus.NotRunning
         _roomState.value = _roomState.value.copy(matchStatus = matchStatus, paused = paused, timer = timer)
+
+        when {
+            previousStatus != matchStatus && matchStatus == MatchStatus.Starting -> addSystemChatMessage("Match starting")
+            previousStatus != matchStatus && matchStatus == MatchStatus.Preparation -> addSystemChatMessage("Preparation started")
+            previousStatus != matchStatus && matchStatus == MatchStatus.Running -> addSystemChatMessage("Match started")
+            previousStatus != matchStatus && matchStatus == MatchStatus.Finished -> addSystemChatMessage("Match finished")
+            previousPaused != paused && paused -> addSystemChatMessage("Match paused")
+            previousPaused != paused && !paused && matchStatus == MatchStatus.Running -> addSystemChatMessage("Match resumed")
+        }
     }
 
     private fun handleEntireBingoBoardUpdate(map: Map<String, Value>) {
@@ -726,6 +750,7 @@ class EldenBingoClient {
     private fun handleCurrentGameSettings(map: Map<String, Value>) {
         val gsMap = map["GameSettings"]?.asMapValue()?.map()?.mapKeys { it.key.asStringValue().asString() } ?: return
         _gameSettings.value = parseGameSettings(gsMap)
+        addSystemChatMessage("Game settings updated")
     }
 
     private fun handleBroadcastMessage(map: Map<String, Value>) {
@@ -740,6 +765,7 @@ class EldenBingoClient {
     }
 
     private fun handleUserChangedTeam(map: Map<String, Value>) {
+        val previousUsers = _roomState.value.users.associateBy { it.guid }
         val usersArr = map["Users"]?.asArrayValue()?.list() ?: return
         val users = usersArr.mapNotNull { uVal ->
             try {
@@ -749,6 +775,13 @@ class EldenBingoClient {
         }
         _roomState.value = _roomState.value.copy(users = users)
         localUser = users.find { it.guid == clientGuid }
+
+        users.forEach { user ->
+            val previousTeam = previousUsers[user.guid]?.team
+            if (previousTeam != null && previousTeam != user.team) {
+                addSystemChatMessage("${user.nick} switched teams")
+            }
+        }
     }
 
     private fun handleUserBanned(map: Map<String, Value>) {
@@ -1104,7 +1137,7 @@ class EldenBingoClient {
         return BingoGameSettings(
             boardSize = map["BoardSize"]?.asIntegerValue()?.asInt() ?: 5,
             lockout = map["Lockout"]?.asBooleanValue()?.boolean ?: false,
-            randomClasses = map["RandomClasses"]?.asBooleanValue()?.boolean ?: true,
+            randomClasses = map["RandomClasses"]?.asBooleanValue()?.boolean ?: false,
             validClasses = map["ValidClasses"]?.asArrayValue()?.list()?.mapNotNull {
                 try { EldenRingClasses.entries.getOrNull(it.asIntegerValue().asInt()) }
                 catch (_: Exception) { null }

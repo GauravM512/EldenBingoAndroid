@@ -2,12 +2,15 @@ package com.eldenbingo.android
 
 import android.app.Activity
 import android.os.Bundle
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,14 +48,24 @@ import com.eldenbingo.android.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
+    private val viewModel: GameViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        window.decorView.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         setContent {
             EldenBingoTheme(darkTheme = true) {
-                EldenBingoMain()
+                EldenBingoMain(viewModel)
             }
         }
+    }
+
+    override fun onDestroy() {
+        if (isFinishing) {
+            viewModel.disconnect()
+        }
+        super.onDestroy()
     }
 }
 
@@ -133,7 +146,9 @@ fun EldenBingoMain(
     }
 
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding(),
         color = MaterialTheme.colorScheme.background
     ) {
         NavHost(
@@ -150,7 +165,7 @@ fun EldenBingoMain(
                     },
                     onDisconnect = { viewModel.disconnect() },
                     onCreateRoom = { roomName, adminPass, nick, team ->
-                        viewModel.createRoom(roomName, adminPass, nick, team)
+                        viewModel.createRoom(roomName, adminPass, nick, team, uploadDefaultBingoJson = true)
                     },
                     onJoinRoom = { roomName, adminPass, nick, team ->
                         viewModel.joinRoom(roomName, adminPass, nick, team)
@@ -183,6 +198,7 @@ fun EldenBingoMain(
                     onTogglePause = { viewModel.togglePause() },
                     onStartMatch = { viewModel.changeMatchStatus(MatchStatus.Starting) },
                     onStopMatch = { viewModel.changeMatchStatus(MatchStatus.Finished) },
+                    onNavigateToSettings = { navController.navigate(Screen.Admin.route) },
                     onNavigateToBingo = { navController.navigate(Screen.BingoCard.route) },
                     onNavigateToChat = { navController.navigate(Screen.Chat.route) },
                     onNavigateToMap = { navController.navigate(Screen.MapPreview.route) }
@@ -240,6 +256,7 @@ fun EldenBingoMain(
                     onTogglePause = { viewModel.togglePause() },
                     onRandomizeBoard = { viewModel.randomizeBoard() },
                     onUpdateSettings = { viewModel.setGameSettings(it) },
+                    onUploadBingoJson = { viewModel.uploadBingoJson(it) },
                     onBack = { navController.popBackStack() }
                 )
             }

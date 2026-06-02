@@ -67,7 +67,7 @@ fun BingoCardScreen(
                 containerColor = Color(0xFF2D2D2D)
             ),
             actions = {
-                if (isAdmin) {
+                if (isAdmin && matchStatus != MatchStatus.Running) {
                     TextButton(onClick = onRandomize) {
                         Text("Randomize", color = EldenGold, fontSize = 12.sp)
                     }
