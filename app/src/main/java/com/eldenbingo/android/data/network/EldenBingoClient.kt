@@ -81,6 +81,7 @@ class EldenBingoClient {
     private var identityToken: String = ""
     private var cancelJob: Job? = null
     private var keepAliveJob: Job? = null
+    private var timerJob: Job? = null
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -129,6 +130,9 @@ class EldenBingoClient {
 
                 // Start keep-alive timer
                 resetKeepAlive()
+
+                // Start local timer ticking
+                startTimerTicking()
             } catch (e: Exception) {
                 isConnected = false
                 _connectionState.value = ConnectionState.Error(e.message ?: "Connection failed")
@@ -153,6 +157,7 @@ class EldenBingoClient {
     private fun cleanup() {
         readJob?.cancel()
         keepAliveJob?.cancel()
+        timerJob?.cancel()
         try { inputStream?.close() } catch (_: Exception) {}
         try { outputStream?.close() } catch (_: Exception) {}
         try { socket?.close() } catch (_: Exception) {}
@@ -177,6 +182,23 @@ class EldenBingoClient {
                         disconnect()
                         break
                     }
+                    // Send keep-alive to server
+                    sendPacket(PacketType.KeepAlive)
+                }
+            }
+        }
+    }
+
+    private fun startTimerTicking() {
+        if (timerJob?.isActive == true) return
+        timerJob = scope.launch {
+            while (isActive() && isConnected) {
+                delay(1000)
+                val current = _roomState.value
+                if (current.matchStatus != MatchStatus.NotRunning &&
+                    current.matchStatus != MatchStatus.Finished &&
+                    !current.paused) {
+                    _roomState.value = current.copy(timer = current.timer + 1000)
                 }
             }
         }

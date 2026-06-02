@@ -184,8 +184,14 @@ fun LobbyScreen(
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    roomState.users.forEach { user ->
-                        UserListItem(user = user)
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 200.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        roomState.users.forEach { user ->
+                            UserListItem(user = user)
+                        }
                     }
                 }
             }

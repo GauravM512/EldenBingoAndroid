@@ -187,6 +187,7 @@ fun MapPreviewScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF111111))
+            .systemBarsPadding()
     ) {
         TopAppBar(
             title = {
@@ -243,7 +244,7 @@ fun MapPreviewScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .onSizeChanged { viewportSize = it }
-                .pointerInput(mapSpec, cameraCenter, zoom) {
+                .pointerInput(mapSpec.instance) {
                     detectTransformGestures { centroid, pan, zoomChange, _ ->
                         followedPlayer = null
                         val before = screenToWorld(centroid, viewportSize, cameraCenter, zoom)

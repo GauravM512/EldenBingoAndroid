@@ -68,7 +68,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val matchTimerString: String
         get() {
             val state = roomState.value
-            val totalSeconds = state.timer / 1000
+            val totalSeconds = kotlin.math.abs(state.timer / 1000)
             val hours = totalSeconds / 3600
             val minutes = (totalSeconds % 3600) / 60
             val seconds = totalSeconds % 60
