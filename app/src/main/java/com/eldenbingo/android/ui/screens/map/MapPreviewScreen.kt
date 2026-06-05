@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -64,11 +65,12 @@ private data class MapTileSet(
     val firstTileWidth: Int,
     val firstTileHeight: Int,
     val columns: Int,
-    val rows: Int
-) {
-    val totalPixelWidth: Float = (firstTileWidth * columns).toFloat()
-    val totalPixelHeight: Float = (firstTileHeight * rows).toFloat()
-}
+    val rows: Int,
+    val totalPixelWidth: Float,
+    val totalPixelHeight: Float,
+    val colWidths: IntArray,
+    val rowHeights: IntArray
+)
 
 private data class CachedTile(
     val bitmap: android.graphics.Bitmap,
@@ -115,6 +117,8 @@ private class MapTileImageCache(
 
 private val MainMapSpec = MapSpec("Lands Between", MapInstance.MainMap, 9645f, 9119f, Offset.Zero, "textures/Map")
 private val DlcMapSpec = MapSpec("Shadow Realm", MapInstance.DLC, 4879f, 5940f, Offset(3035f, 1864f), "textures/Map/DLC")
+private val RoundTableWorldRect = Rect(2740f, 7510f, 2940f, 7710f)
+private val RoundTableMapPos = Offset(1750f, 7369f)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -380,10 +384,16 @@ private fun DrawScope.drawMapBackground(
     } else {
         val factorX = mapSpec.width / tileSet.totalPixelWidth
         val factorY = mapSpec.height / tileSet.totalPixelHeight
+
+        val colOffsets = FloatArray(tileSet.columns)
+        val rowOffsets = FloatArray(tileSet.rows)
+        for (i in 1 until tileSet.columns) colOffsets[i] = colOffsets[i - 1] + tileSet.colWidths[i - 1]
+        for (i in 1 until tileSet.rows) rowOffsets[i] = rowOffsets[i - 1] + tileSet.rowHeights[i - 1]
+
         tileSet.tiles.forEach { tile ->
             val tileWorldTopLeft = mapSpec.offset + Offset(
-                tile.col * tileSet.firstTileWidth * factorX,
-                tile.row * tileSet.firstTileHeight * factorY
+                colOffsets[tile.col] * factorX,
+                rowOffsets[tile.row] * factorY
             )
             val tileWorldBottomRight = tileWorldTopLeft + Offset(
                 tile.pixelWidth * factorX,
@@ -436,8 +446,9 @@ private fun DrawScope.drawMapBackground(
 }
 
 private fun DrawScope.drawRoundTable(image: ImageBitmap, cameraCenter: Offset, zoom: Float) {
-    val topLeft = worldToScreen(Offset(2740f, 7510f), size, cameraCenter, zoom)
-    val side = 200f * zoom
+    val center = worldToScreen(RoundTableMapPos, size, cameraCenter, zoom)
+    val side = 113f * zoom
+    val topLeft = center - Offset(side * 0.5f, side * 0.5f)
     drawImage(
         image = image,
         dstOffset = androidx.compose.ui.unit.IntOffset(topLeft.x.toInt(), topLeft.y.toInt()),
@@ -452,7 +463,14 @@ private fun DrawScope.drawRoundTable(image: ImageBitmap, cameraCenter: Offset, z
 }
 
 private fun DrawScope.drawPlayer(player: PlayerPosition, cameraCenter: Offset, zoom: Float) {
-    val screenPos = worldToScreen(Offset(player.x, player.y), size, cameraCenter, zoom)
+    val worldPos = if (player.mapInstance == MapInstance.MainMap &&
+        player.x in RoundTableWorldRect.left..RoundTableWorldRect.right &&
+        player.y in RoundTableWorldRect.top..RoundTableWorldRect.bottom) {
+        RoundTableMapPos
+    } else {
+        Offset(player.x, player.y)
+    }
+    val screenPos = worldToScreen(worldPos, size, cameraCenter, zoom)
     if (screenPos.x !in -80f..size.width + 80f || screenPos.y !in -80f..size.height + 80f) return
 
     val teamColor = if (player.team in TeamColors.indices) TeamColors[player.team] else Color.White
@@ -532,11 +550,25 @@ private fun loadMapTiles(assetManager: AssetManager, path: String): MapTileSet? 
     }
 
     val first = tiles.firstOrNull() ?: return null
+    val columns = tiles.maxOf { it.col } + 1
+    val rows = tiles.maxOf { it.row } + 1
+
+    val colWidths = IntArray(columns)
+    val rowHeights = IntArray(rows)
+    tiles.forEach { tile ->
+        colWidths[tile.col] = max(colWidths[tile.col], tile.pixelWidth)
+        rowHeights[tile.row] = max(rowHeights[tile.row], tile.pixelHeight)
+    }
+
     return MapTileSet(
         tiles = tiles,
         firstTileWidth = first.pixelWidth,
         firstTileHeight = first.pixelHeight,
-        columns = tiles.maxOf { it.col } + 1,
-        rows = tiles.maxOf { it.row } + 1
+        columns = columns,
+        rows = rows,
+        totalPixelWidth = colWidths.sum().toFloat(),
+        totalPixelHeight = rowHeights.sum().toFloat(),
+        colWidths = colWidths,
+        rowHeights = rowHeights
     )
 }
