@@ -127,6 +127,12 @@ data class PlayerPosition(
     val team: Int
 )
 
+data class SquareClaimEvent(
+    val nick: String,
+    val squareText: String,
+    val team: Int
+)
+
 // ---- Team Colors ----
 
 data class TeamColor(val color: Long, val name: String)

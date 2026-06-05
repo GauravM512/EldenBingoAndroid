@@ -56,6 +56,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val soundEvents: SharedFlow<GameSound>
         get() = client.soundEvents
 
+    val squareClaimEvents: SharedFlow<SquareClaimEvent>
+        get() = client.squareClaimEvents
+
     // ---- Game Settings ----
     val gameSettings: StateFlow<BingoGameSettings?>
         get() = client.gameSettings
@@ -115,7 +118,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun connect(address: String, port: Int) {
         viewModelScope.launch {
-            client.addSystemChatMessage("Connecting to $address:$port")
             client.connect(address, port)
         }
     }
@@ -128,7 +130,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 } catch (_: Exception) {
                 }
             }
-            client.addSystemChatMessage("Disconnecting")
             client.disconnect()
         }
     }
@@ -140,14 +141,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun createRoom(roomName: String, adminPass: String, nick: String, team: Int, settings: BingoGameSettings = BingoGameSettings(), uploadDefaultBingoJson: Boolean = false) {
         pendingDefaultBingoJsonUpload = uploadDefaultBingoJson
         viewModelScope.launch {
-            client.addSystemChatMessage("Creating room '$roomName'")
             client.createRoom(roomName, adminPass, nick, team, settings)
         }
     }
 
     fun joinRoom(roomName: String, adminPass: String, nick: String, team: Int) {
         viewModelScope.launch {
-            client.addSystemChatMessage("Joining room '$roomName'")
             client.joinRoom(roomName, adminPass, nick, team)
         }
     }
@@ -155,7 +154,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun leaveRoom() {
         pendingDefaultBingoJsonUpload = false
         viewModelScope.launch {
-            client.addSystemChatMessage("Leaving room")
             client.leaveRoom()
         }
     }
@@ -179,42 +177,36 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun changeMatchStatus(status: MatchStatus) {
         viewModelScope.launch {
-            client.addSystemChatMessage("Changing match status to ${status.name}")
             client.changeMatchStatus(status)
         }
     }
 
     fun togglePause() {
         viewModelScope.launch {
-            client.addSystemChatMessage("Toggling match pause")
             client.togglePause()
         }
     }
 
     fun requestCurrentGameSettings() {
         viewModelScope.launch {
-            client.addSystemChatMessage("Requesting current game settings")
             client.requestCurrentGameSettings()
         }
     }
 
     fun setGameSettings(settings: BingoGameSettings) {
         viewModelScope.launch {
-            client.addSystemChatMessage("Updating game settings")
             client.setGameSettings(settings)
         }
     }
 
     fun requestTeamChange(team: Int) {
         viewModelScope.launch {
-            client.addSystemChatMessage("Requesting team change")
             client.requestTeamChange(team)
         }
     }
 
     fun uploadBingoJson(json: String) {
         viewModelScope.launch {
-            client.addSystemChatMessage("Uploading bingo JSON")
             client.sendBingoJson(json)
         }
     }

@@ -226,6 +226,7 @@ fun EldenBingoMain(
                     board = bingoBoard,
                     matchStatus = roomState.matchStatus,
                     localTeam = localUser?.team ?: 0,
+                    squareClaimEvents = viewModel.squareClaimEvents,
                     onCheck = { viewModel.tryCheck(it) },
                     onMark = { viewModel.tryMark(it) },
                     onCounterChange = { index, change -> viewModel.trySetCounter(index, change) },

@@ -1,23 +1,11 @@
 package com.eldenbingo.android.ui.screens.bingo
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,8 +16,11 @@ import androidx.compose.ui.unit.sp
 import com.eldenbingo.android.data.model.BingoBoard
 import com.eldenbingo.android.data.model.BingoBoardSquare
 import com.eldenbingo.android.data.model.MatchStatus
+import com.eldenbingo.android.data.model.SquareClaimEvent
 import com.eldenbingo.android.ui.components.BingoSquare
 import com.eldenbingo.android.ui.theme.EldenGold
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharedFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +28,7 @@ fun BingoCardScreen(
     board: BingoBoard?,
     matchStatus: MatchStatus,
     localTeam: Int,
+    squareClaimEvents: SharedFlow<SquareClaimEvent>,
     onCheck: (Int) -> Unit,
     onMark: (Int) -> Unit,
     onCounterChange: (Int, Int) -> Unit,
@@ -45,12 +37,24 @@ fun BingoCardScreen(
     isAdmin: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFF1A1A1A))
-    ) {
-        TopAppBar(
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(squareClaimEvents) {
+        squareClaimEvents.collect { event ->
+            snackbarHostState.showSnackbar(
+                message = "${event.nick} claimed '${event.squareText}'",
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF1A1A1A))
+        ) {
+            TopAppBar(
             title = {
                 Text(
                     "Bingo Card",
@@ -162,4 +166,10 @@ fun BingoCardScreen(
             }
         }
     }
+
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = Modifier.align(Alignment.BottomCenter)
+    )
+}
 }

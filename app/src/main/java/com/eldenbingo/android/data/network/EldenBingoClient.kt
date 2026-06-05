@@ -82,6 +82,9 @@ class EldenBingoClient {
     private val _soundEvents = MutableSharedFlow<GameSound>(extraBufferCapacity = 8)
     val soundEvents: SharedFlow<GameSound> = _soundEvents.asSharedFlow()
 
+    private val _squareClaimEvents = MutableSharedFlow<SquareClaimEvent>(extraBufferCapacity = 8)
+    val squareClaimEvents: SharedFlow<SquareClaimEvent> = _squareClaimEvents.asSharedFlow()
+
     private val _gameSettings = MutableStateFlow<BingoGameSettings?>(null)
     val gameSettings: StateFlow<BingoGameSettings?> = _gameSettings.asStateFlow()
 
@@ -553,7 +556,6 @@ class EldenBingoClient {
 
         localUser = users.find { it.guid == clientGuid }
         _statusMessage.value = "Joined lobby: $roomName"
-        addSystemChatMessage("Joined lobby: $roomName")
     }
 
     private fun handleJoinRoomDenied(map: Map<String, Value>) {
@@ -572,7 +574,6 @@ class EldenBingoClient {
         val currentUsers = _roomState.value.users.toMutableList()
         currentUsers.add(user)
         _roomState.value = _roomState.value.copy(users = currentUsers)
-        addSystemChatMessage("${user.nick} joined the lobby")
     }
 
     private fun handleUserLeftRoom(map: Map<String, Value>) {
@@ -580,7 +581,6 @@ class EldenBingoClient {
         val user = parseUserFromMap(userMap.mapKeys { it.key.asStringValue().asString() }) ?: return
         val currentUsers = _roomState.value.users.filter { it.guid != user.guid }
         _roomState.value = _roomState.value.copy(users = currentUsers)
-        addSystemChatMessage("${user.nick} left the lobby")
     }
 
     private fun handleUserChat(map: Map<String, Value>) {
@@ -606,15 +606,6 @@ class EldenBingoClient {
         val timer = map["Timer"]?.asIntegerValue()?.asInt() ?: 0
         val matchStatus = MatchStatus.entries.getOrNull(matchStatusStr) ?: MatchStatus.NotRunning
         _roomState.value = _roomState.value.copy(matchStatus = matchStatus, paused = paused, timer = timer)
-
-        when {
-            previousStatus != matchStatus && matchStatus == MatchStatus.Starting -> addSystemChatMessage("Match starting")
-            previousStatus != matchStatus && matchStatus == MatchStatus.Preparation -> addSystemChatMessage("Preparation started")
-            previousStatus != matchStatus && matchStatus == MatchStatus.Running -> addSystemChatMessage("Match started")
-            previousStatus != matchStatus && matchStatus == MatchStatus.Finished -> addSystemChatMessage("Match finished")
-            previousPaused != paused && paused -> addSystemChatMessage("Match paused")
-            previousPaused != paused && !paused && matchStatus == MatchStatus.Running -> addSystemChatMessage("Match resumed")
-        }
     }
 
     private fun handleEntireBingoBoardUpdate(map: Map<String, Value>) {
@@ -674,6 +665,7 @@ class EldenBingoClient {
     }
 
     private fun handleUserChecked(map: Map<String, Value>) {
+        val userGuidValue = map["UserGuid"]
         val index = map["Index"]?.asIntegerValue()?.asInt() ?: return
         val team = map["Team"]?.asIntegerValue()?.asInt() ?: return
         val teamsChecked = map["TeamsChecked"]?.asArrayValue()?.list()?.map { it.asIntegerValue().asInt() }?.toIntArray() ?: return
@@ -691,6 +683,16 @@ class EldenBingoClient {
 
         val board = _bingoBoard.value ?: return
         if (index in board.squares.indices) {
+            val square = board.squares[index]
+            if (isClaimed) {
+                // Find who claimed it using the UserGuid from the packet
+                val userGuid = parseGuid(userGuidValue)
+                val claimer = if (userGuid != null) _roomState.value.users.find { it.guid == userGuid } else null
+                val nick = claimer?.nick ?: "Team $team"
+                addSystemChatMessage("$nick claimed '${square.text}'")
+                _squareClaimEvents.tryEmit(SquareClaimEvent(nick, square.text, team))
+            }
+
             val newSquares = board.squares.toMutableList()
             newSquares[index] = newSquares[index].copy(team = teamsChecked)
             _bingoBoard.value = board.copy(squares = newSquares)
@@ -721,6 +723,7 @@ class EldenBingoClient {
             bingoIndex = bingoMap["BingoIndex"]?.asIntegerValue()?.asInt() ?: 0
         )
         _bingoLines.value = _bingoLines.value + line
+        addSystemChatMessage("${line.name} Team achieved BINGO!")
         _soundEvents.tryEmit(GameSound.Bingo)
     }
 
@@ -750,7 +753,6 @@ class EldenBingoClient {
     private fun handleCurrentGameSettings(map: Map<String, Value>) {
         val gsMap = map["GameSettings"]?.asMapValue()?.map()?.mapKeys { it.key.asStringValue().asString() } ?: return
         _gameSettings.value = parseGameSettings(gsMap)
-        addSystemChatMessage("Game settings updated")
     }
 
     private fun handleBroadcastMessage(map: Map<String, Value>) {
@@ -775,13 +777,6 @@ class EldenBingoClient {
         }
         _roomState.value = _roomState.value.copy(users = users)
         localUser = users.find { it.guid == clientGuid }
-
-        users.forEach { user ->
-            val previousTeam = previousUsers[user.guid]?.team
-            if (previousTeam != null && previousTeam != user.team) {
-                addSystemChatMessage("${user.nick} switched teams")
-            }
-        }
     }
 
     private fun handleUserBanned(map: Map<String, Value>) {
