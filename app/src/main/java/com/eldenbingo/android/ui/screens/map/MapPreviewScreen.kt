@@ -159,7 +159,7 @@ fun MapPreviewScreen(
         if (viewportSize.width <= 0 || viewportSize.height <= 0) return
         if (visiblePlayers.isEmpty()) {
             cameraCenter = mapSpec.offset + Offset(mapSpec.width * 0.5f, mapSpec.height * 0.5f)
-            zoom = min(viewportSize.width / mapSpec.width, viewportSize.height / mapSpec.height).coerceIn(0.04f, 2.5f)
+            zoom = min(viewportSize.width / mapSpec.width, viewportSize.height / mapSpec.height).coerceIn(0.01f, 5f)
             return
         }
 
@@ -170,7 +170,7 @@ fun MapPreviewScreen(
         val paddedWidth = max(600f, (maxX - minX) * 1.3f)
         val paddedHeight = max(600f, (maxY - minY) * 1.3f)
         cameraCenter = Offset((minX + maxX) * 0.5f, (minY + maxY) * 0.5f)
-        zoom = min(viewportSize.width / paddedWidth, viewportSize.height / paddedHeight).coerceIn(0.04f, 2.5f)
+        zoom = min(viewportSize.width / paddedWidth, viewportSize.height / paddedHeight).coerceIn(0.01f, 5f)
     }
 
     LaunchedEffect(mapSpec.instance, viewportSize, visiblePlayers.size) {
@@ -252,7 +252,7 @@ fun MapPreviewScreen(
                     detectTransformGestures { centroid, pan, zoomChange, _ ->
                         followedPlayer = null
                         val before = screenToWorld(centroid, viewportSize, cameraCenter, zoom)
-                        val newZoom = (zoom * zoomChange).coerceIn(0.04f, 2.5f)
+                        val newZoom = (zoom * zoomChange).coerceIn(0.01f, 5f)
                         val after = screenToWorld(centroid, viewportSize, cameraCenter, newZoom)
                         cameraCenter += before - after - Offset(pan.x / newZoom, pan.y / newZoom)
                         zoom = newZoom
@@ -447,7 +447,8 @@ private fun DrawScope.drawMapBackground(
 
 private fun DrawScope.drawRoundTable(image: ImageBitmap, cameraCenter: Offset, zoom: Float) {
     val center = worldToScreen(RoundTableMapPos, size, cameraCenter, zoom)
-    val side = 113f * zoom
+    val baseSide = 500f
+    val side = baseSide * zoom
     val topLeft = center - Offset(side * 0.5f, side * 0.5f)
     drawImage(
         image = image,
