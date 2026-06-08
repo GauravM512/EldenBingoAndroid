@@ -264,6 +264,13 @@ fun LobbyScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         bingoLines.forEach { line ->
                             val teamColor = if (line.team in TeamColors.indices) TeamColors[line.team] else Color.White
+                            val typeStr = when (line.type) {
+                                0 -> "column ${line.bingoIndex + 1}"
+                                1 -> "row ${line.bingoIndex + 1}"
+                                2 -> "diagonal TL->BR"
+                                3 -> "diagonal BL->TR"
+                                else -> "unknown"
+                            }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
@@ -272,7 +279,7 @@ fun LobbyScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = line.name,
+                                    text = "[${line.timerStr}] ${line.name} BINGO on $typeStr!",
                                     color = Color.White,
                                     fontSize = 15.sp
                                 )

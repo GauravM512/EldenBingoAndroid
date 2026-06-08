@@ -179,6 +179,7 @@ class EldenBingoClient {
         outputStream = null
         _roomState.value = RoomState()
         _bingoBoard.value = null
+        _bingoLines.value = emptyList()
         localUser = null
     }
 
@@ -600,11 +601,17 @@ class EldenBingoClient {
 
     private fun handleMatchStatusUpdate(map: Map<String, Value>) {
         val previousStatus = _roomState.value.matchStatus
-        val previousPaused = _roomState.value.paused
         val matchStatusStr = map["MatchStatus"]?.asIntegerValue()?.asInt() ?: 0
         val paused = map["Paused"]?.asBooleanValue()?.boolean ?: false
         val timer = map["Timer"]?.asIntegerValue()?.asInt() ?: 0
         val matchStatus = MatchStatus.entries.getOrNull(matchStatusStr) ?: MatchStatus.NotRunning
+
+        // Clear lines when match starts (transition from NotRunning/Finished to Starting/Preparation)
+        if ((matchStatus == MatchStatus.Starting || matchStatus == MatchStatus.Preparation) &&
+            (previousStatus == MatchStatus.NotRunning || previousStatus == MatchStatus.Finished)) {
+            _bingoLines.value = emptyList()
+        }
+
         _roomState.value = _roomState.value.copy(matchStatus = matchStatus, paused = paused, timer = timer)
     }
 
@@ -716,15 +723,38 @@ class EldenBingoClient {
 
     private fun handleBingoAchieved(map: Map<String, Value>) {
         val bingoMap = map["Bingo"]?.asMapValue()?.map()?.mapKeys { it.key.asStringValue().asString() } ?: return
+        val timerStr = formatTimerValue(_roomState.value.timer)
+        val type = bingoMap["Type"]?.asIntegerValue()?.asInt() ?: 0
+        val bingoIndex = bingoMap["BingoIndex"]?.asIntegerValue()?.asInt() ?: 0
+        val teamName = bingoMap["Name"]?.asStringValue()?.asString() ?: ""
+
+        val typeStr = when (type) {
+            0 -> "column ${bingoIndex + 1}"
+            1 -> "row ${bingoIndex + 1}"
+            2 -> "diagonal TL->BR"
+            3 -> "diagonal BL->TR"
+            else -> "unknown"
+        }
+
         val line = BingoLine(
             team = bingoMap["Team"]?.asIntegerValue()?.asInt() ?: 0,
-            name = bingoMap["Name"]?.asStringValue()?.asString() ?: "",
-            type = bingoMap["Type"]?.asIntegerValue()?.asInt() ?: 0,
-            bingoIndex = bingoMap["BingoIndex"]?.asIntegerValue()?.asInt() ?: 0
+            name = teamName,
+            type = type,
+            bingoIndex = bingoIndex,
+            timerStr = timerStr
         )
         _bingoLines.value = _bingoLines.value + line
-        addSystemChatMessage("${line.name} Team achieved BINGO!")
+
+        addSystemChatMessage("[$timerStr] $teamName BINGO on $typeStr!")
         _soundEvents.tryEmit(GameSound.Bingo)
+    }
+
+    private fun formatTimerValue(timerMs: Int): String {
+        val totalSeconds = kotlin.math.abs(timerMs / 1000)
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        return String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
     }
 
     private fun handleUserCoordinates(map: Map<String, Value>) {

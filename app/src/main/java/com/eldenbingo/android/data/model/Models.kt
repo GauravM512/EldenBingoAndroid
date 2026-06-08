@@ -89,7 +89,8 @@ data class BingoLine(
     val team: Int,
     val name: String,
     val type: Int,
-    val bingoIndex: Int
+    val bingoIndex: Int,
+    val timerStr: String = ""
 )
 
 data class MapCoordinates(
