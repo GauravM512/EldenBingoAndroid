@@ -147,6 +147,9 @@ fun EldenBingoMain(
                 popUpTo(Screen.Connect.route) { inclusive = true }
             }
         }
+        if (isInRoom) {
+            viewModel.requestCurrentGameSettings()
+        }
     }
 
     // Navigate back to connect when disconnected
@@ -273,7 +276,8 @@ fun EldenBingoMain(
                     onRandomizeBoard = { viewModel.randomizeBoard() },
                     onUpdateSettings = { viewModel.setGameSettings(it) },
                     onUploadBingoJson = { viewModel.uploadBingoJson(it) },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onRequestSettings = { viewModel.requestCurrentGameSettings() }
                 )
             }
         }
