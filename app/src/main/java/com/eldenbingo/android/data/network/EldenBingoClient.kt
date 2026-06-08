@@ -103,7 +103,7 @@ class EldenBingoClient {
         private const val SERVER_REGISTER_STRING = "neto server"
         private const val CLIENT_REGISTER_STRING = "hello"
         private const val KEEP_ALIVE_TIMEOUT_MS = 15000L
-        private const val KEEP_ALIVE_INTERVAL_MS = 5000L
+        private const val KEEP_ALIVE_INTERVAL_MS = 3000L
         private const val LZ4_BLOCK_ARRAY_TYPE = 98
         private const val LZ4_BLOCK_TYPE = 99
     }

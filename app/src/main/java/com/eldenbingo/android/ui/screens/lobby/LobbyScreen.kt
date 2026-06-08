@@ -62,7 +62,7 @@ fun LobbyScreen(
                         text = "Lobby: ${roomState.name}",
                         color = EldenGold,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        fontSize = 18.sp
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -74,14 +74,14 @@ fun LobbyScreen(
                                 MatchStatus.Finished -> Color(0xFF00BCD4)
                                 else -> Color.Gray
                             },
-                            fontSize = 12.sp
+                            fontSize = 14.sp
                         )
                         if (isMatchRunning) {
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = matchTimerString,
                                 color = Color.White,
-                                fontSize = 12.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -127,7 +127,7 @@ fun LobbyScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Start Match", fontSize = 11.sp)
+                        Text("Start Match", fontSize = 14.sp)
                     }
                 } else {
                     Button(
@@ -135,21 +135,21 @@ fun LobbyScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF57C00)),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(if (roomState.paused) "Resume" else "Pause", fontSize = 11.sp)
+                        Text(if (roomState.paused) "Resume" else "Pause", fontSize = 14.sp)
                     }
                     Button(
                         onClick = onStopMatch,
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.7f)),
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Stop", fontSize = 11.sp)
+                        Text("Stop", fontSize = 14.sp)
                     }
                 }
                 OutlinedButton(
                     onClick = { showTeamDialog = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Change Team", fontSize = 11.sp, color = EldenGold)
+                    Text("Change Team", fontSize = 14.sp, color = EldenGold)
                 }
             }
         } else {
@@ -164,7 +164,7 @@ fun LobbyScreen(
                     onClick = { showTeamDialog = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Change Team", fontSize = 11.sp, color = EldenGold)
+                    Text("Change Team", fontSize = 14.sp, color = EldenGold)
                 }
             }
         }
@@ -187,7 +187,7 @@ fun LobbyScreen(
                         text = "Players (${roomState.users.size})",
                         color = EldenGold,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontSize = 16.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Column(
@@ -213,7 +213,7 @@ fun LobbyScreen(
                             text = "Scoreboard",
                             color = EldenGold,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 16.sp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         scoreboard.sortedByDescending { it.score }.forEach { score ->
@@ -233,13 +233,13 @@ fun LobbyScreen(
                                 Text(
                                     text = score.name,
                                     color = Color.White,
-                                    fontSize = 13.sp,
+                                    fontSize = 15.sp,
                                     modifier = Modifier.weight(1f)
                                 )
                                 Text(
                                     text = "${score.score} pts",
                                     color = EldenGold,
-                                    fontSize = 13.sp,
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -259,7 +259,7 @@ fun LobbyScreen(
                             text = "Bingo Lines",
                             color = EldenGold,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 16.sp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         bingoLines.forEach { line ->
@@ -274,7 +274,7 @@ fun LobbyScreen(
                                 Text(
                                     text = line.name,
                                     color = Color.White,
-                                    fontSize = 13.sp
+                                    fontSize = 15.sp
                                 )
                             }
                         }
@@ -293,12 +293,15 @@ fun LobbyScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Icon(Icons.Default.GridOn, null, tint = EldenGold, modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Bingo Card", color = EldenGold, fontSize = 12.sp)
+                        Text("Bingo Card", color = EldenGold, fontSize = 14.sp)
                     }
                 }
                 Card(
@@ -307,12 +310,15 @@ fun LobbyScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Chat, null, tint = EldenGold, modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Chat", color = EldenGold, fontSize = 12.sp)
+                        Text("Chat", color = EldenGold, fontSize = 14.sp)
                     }
                 }
                 Card(
@@ -321,12 +327,15 @@ fun LobbyScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Icon(Icons.Default.Map, null, tint = EldenGold, modifier = Modifier.size(32.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Map", color = EldenGold, fontSize = 12.sp)
+                        Text("Map", color = EldenGold, fontSize = 14.sp)
                     }
                 }
             }
