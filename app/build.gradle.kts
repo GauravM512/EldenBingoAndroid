@@ -4,6 +4,19 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+object AppVersion {
+    const val MAJOR = 1
+    const val MINOR = 0
+    const val PATCH = 1
+    const val BUILD = 1
+
+    const val VERSION_NAME = "$MAJOR.$MINOR.$PATCH"
+    const val VERSION_CODE = MAJOR * 1000000 +
+            MINOR * 10000 +
+            PATCH * 100 +
+            BUILD
+}
+
 android {
     namespace = "com.eldenbingo.android"
     compileSdk = 37
@@ -12,8 +25,8 @@ android {
         applicationId = "com.eldenbingo.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = AppVersion.VERSION_CODE
+        versionName = AppVersion.VERSION_NAME
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
