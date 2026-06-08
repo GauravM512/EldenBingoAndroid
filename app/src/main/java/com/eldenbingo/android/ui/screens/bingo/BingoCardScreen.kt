@@ -1,9 +1,15 @@
 package com.eldenbingo.android.ui.screens.bingo
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +44,7 @@ fun BingoCardScreen(
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    var showHints by remember { mutableStateOf(false) }
 
     LaunchedEffect(squareClaimEvents) {
         squareClaimEvents.collect { event ->
@@ -71,6 +78,13 @@ fun BingoCardScreen(
                 containerColor = Color(0xFF2D2D2D)
             ),
             actions = {
+                IconButton(onClick = { showHints = !showHints }) {
+                    Icon(
+                        if (showHints) Icons.Default.Help else Icons.Default.HelpOutline,
+                        contentDescription = "Toggle Hints",
+                        tint = EldenGold
+                    )
+                }
                 if (isAdmin && matchStatus != MatchStatus.Running) {
                     TextButton(onClick = onRandomize) {
                         Text("Randomize", color = EldenGold, fontSize = 12.sp)
@@ -129,6 +143,31 @@ fun BingoCardScreen(
                 }
             }
 
+            // Interaction Guide (UI Hint)
+            AnimatedVisibility(
+                visible = showHints,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D2D)),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        InteractionHintItem(text = "Tap: Claim", modifier = Modifier.weight(1f))
+                        InteractionHintItem(text = "2x Tap: Details", modifier = Modifier.weight(1f))
+                        InteractionHintItem(text = "Hold: Star", modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+
             // Bingo grid
             Column(
                 modifier = Modifier
@@ -172,4 +211,16 @@ fun BingoCardScreen(
         modifier = Modifier.align(Alignment.BottomCenter)
     )
 }
+}
+
+@Composable
+private fun InteractionHintItem(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        color = EldenGold.copy(alpha = 0.8f),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Medium,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+    )
 }

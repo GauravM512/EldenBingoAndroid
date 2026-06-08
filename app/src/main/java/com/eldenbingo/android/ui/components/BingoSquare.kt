@@ -82,9 +82,9 @@ fun BingoSquare(
                 shape = RoundedCornerShape(4.dp)
             )
             .combinedClickable(
-                onClick = { onCheck(index) },
-                onLongClick = { onMark(index) },
-                onDoubleClick = { showDialog = true }
+                onClick = { onCheck(index) }, // 1 tap = mark (claim)
+                onLongClick = { onMark(index) }, // hold = star mark
+                onDoubleClick = { showDialog = true } // double tap = description & counters
             )
             .padding(4.dp),
         contentAlignment = Alignment.Center
