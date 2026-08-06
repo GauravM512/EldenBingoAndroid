@@ -149,9 +149,6 @@ fun EldenBingoMain(
                 popUpTo(Screen.Connect.route) { inclusive = true }
             }
         }
-        if (isInRoom) {
-            viewModel.requestCurrentGameSettings()
-        }
     }
 
     // Navigate back to connect when disconnected
