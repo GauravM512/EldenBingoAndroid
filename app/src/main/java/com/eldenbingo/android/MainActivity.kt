@@ -90,6 +90,8 @@ fun EldenBingoMain(
     val playerPositions by viewModel.playerPositions.collectAsState()
     val scoreboard by viewModel.scoreboard.collectAsState()
     val bingoLines by viewModel.bingoLines.collectAsState()
+    val matchEvents by viewModel.matchEvents.collectAsState()
+    val matchLog by viewModel.matchLog.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
     val gameSettings by viewModel.gameSettings.collectAsState()
 
@@ -204,6 +206,8 @@ fun EldenBingoMain(
                     localUser = localUser,
                     scoreboard = scoreboard,
                     bingoLines = bingoLines,
+                    matchEvents = matchEvents,
+                    bingoBoard = bingoBoard,
                     matchTimerString = viewModel.matchTimerString,
                     matchStatusString = viewModel.matchStatusString,
                     onLeaveRoom = {
@@ -270,6 +274,7 @@ fun EldenBingoMain(
                     gameSettings = gameSettings,
                     matchStatus = roomState.matchStatus,
                     isPaused = roomState.paused,
+                    matchLog = matchLog,
                     onStartMatch = { viewModel.changeMatchStatus(MatchStatus.Starting) },
                     onStopMatch = { viewModel.changeMatchStatus(MatchStatus.Finished) },
                     onTogglePause = { viewModel.togglePause() },
@@ -277,7 +282,8 @@ fun EldenBingoMain(
                     onUpdateSettings = { viewModel.setGameSettings(it) },
                     onUploadBingoJson = { viewModel.uploadBingoJson(it) },
                     onBack = { navController.popBackStack() },
-                    onRequestSettings = { viewModel.requestCurrentGameSettings() }
+                    onRequestSettings = { viewModel.requestCurrentGameSettings() },
+                    onRequestMatchLog = { viewModel.requestMatchLog(it) }
                 )
             }
         }

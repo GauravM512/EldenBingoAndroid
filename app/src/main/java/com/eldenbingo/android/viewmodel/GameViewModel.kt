@@ -49,6 +49,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     val bingoLines: StateFlow<List<BingoLine>>
         get() = client.bingoLines
 
+    // ---- Match Events ----
+    val matchEvents: StateFlow<List<MatchEvent>>
+        get() = client.matchEvents
+
+    val matchLog: StateFlow<String?>
+        get() = client.matchLog
+
     // ---- Status ----
     val statusMessage: StateFlow<String?>
         get() = client.statusMessage
@@ -217,5 +224,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearStatus() {
         client.clearStatus()
+    }
+
+    fun requestMatchLog(json: Boolean = false) {
+        client.requestMatchLog(json)
     }
 }

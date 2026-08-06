@@ -16,6 +16,10 @@ enum class EldenRingClasses {
     Vagabond, Warrior, Hero, Bandit, Astrologer, Prophet, Samurai, Prisoner, Confessor, Wretch
 }
 
+enum class MatchEventType {
+    PlayerCheck, RefereeCheck, Bingo
+}
+
 enum class PacketType {
     ServerRegisterAccepted,
     ServerRegisterDenied,
@@ -132,6 +136,15 @@ data class SquareClaimEvent(
     val nick: String,
     val squareText: String,
     val team: Int
+)
+
+data class MatchEvent(
+    val timestamp: Int,
+    val squareIndex: Int,
+    val team: Int,
+    val player: String,
+    val checked: Boolean,
+    val eventType: MatchEventType
 )
 
 // ---- Team Colors ----

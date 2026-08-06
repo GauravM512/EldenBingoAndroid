@@ -30,6 +30,8 @@ fun LobbyScreen(
     localUser: UserInRoom?,
     scoreboard: List<TeamScore>,
     bingoLines: List<BingoLine>,
+    matchEvents: List<MatchEvent>,
+    bingoBoard: BingoBoard?,
     matchTimerString: String,
     matchStatusString: String,
     onLeaveRoom: () -> Unit,
@@ -283,6 +285,66 @@ fun LobbyScreen(
                                     color = Color.White,
                                     fontSize = 15.sp
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Match Log
+            if (matchEvents.isNotEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D2D)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Match Log",
+                            color = EldenGold,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Column(
+                            modifier = Modifier
+                                .heightIn(max = 200.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            matchEvents.asReversed().forEach { event ->
+                                val teamColor = if (event.team in TeamColors.indices) TeamColors[event.team] else Color.White
+                                val action = if (event.checked) "marked" else "unmarked"
+                                
+                                val totalSeconds = kotlin.math.abs(event.timestamp / 1000)
+                                val hours = totalSeconds / 3600
+                                val minutes = (totalSeconds % 3600) / 60
+                                val seconds = totalSeconds % 60
+                                val timestampStr = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+                                val squareText = if (event.squareIndex >= 0 && bingoBoard != null && event.squareIndex < bingoBoard.squares.size) {
+                                    bingoBoard.squares[event.squareIndex].text
+                                } else if (event.eventType == MatchEventType.Bingo) {
+                                    "BINGO!"
+                                } else {
+                                    "square ${event.squareIndex}"
+                                }
+
+                                Row(
+                                    modifier = Modifier.padding(vertical = 2.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(top = 6.dp)
+                                            .size(6.dp)
+                                            .background(teamColor, RoundedCornerShape(1.dp))
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "[$timestampStr] ${event.player} $action $squareText",
+                                        color = Color.LightGray,
+                                        fontSize = 13.sp
+                                    )
+                                }
                             }
                         }
                     }
