@@ -76,6 +76,12 @@ class EldenBingoClient {
     private val _bingoLines = MutableStateFlow<List<BingoLine>>(emptyList())
     val bingoLines: StateFlow<List<BingoLine>> = _bingoLines.asStateFlow()
 
+    private val _matchEvents = MutableStateFlow<List<MatchEvent>>(emptyList())
+    val matchEvents: StateFlow<List<MatchEvent>> = _matchEvents.asStateFlow()
+
+    private val _matchLog = MutableStateFlow<String?>(null)
+    val matchLog: StateFlow<String?> = _matchLog.asStateFlow()
+
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
@@ -99,7 +105,7 @@ class EldenBingoClient {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     companion object {
-        private const val VERSION = "0.17.0"
+        private const val VERSION = "0.18.0"
         private const val SERVER_REGISTER_STRING = "neto server"
         private const val CLIENT_REGISTER_STRING = "hello"
         private const val KEEP_ALIVE_TIMEOUT_MS = 15000L
@@ -323,7 +329,11 @@ class EldenBingoClient {
                 isMessagePackArray(payload) -> decompressLz4BlockArray(payload) ?: payload
                 else -> payload
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            val hex = if (payload.size > 32) 
+                payload.take(32).toByteArray().toHex() + "..." 
+            else payload.toHex()
+            _statusMessage.value = "Decompression failed: ${e.message} (Payload: $hex)"
             payload
         }
     }
@@ -333,10 +343,26 @@ class EldenBingoClient {
         if (ext.type != LZ4_BLOCK_TYPE) return null
 
         val extData = payload.copyOfRange(ext.dataStart, ext.dataStart + ext.dataLength)
-        val unpacker = MessagePack.newDefaultUnpacker(extData)
-        val uncompressedLength = unpacker.unpackInt()
-        val compressedStart = unpacker.totalReadBytes.toInt()
-        val compressed = extData.copyOfRange(compressedStart, extData.size)
+        val firstByte = extData[0].toInt() and 0xFF
+        
+        val uncompressedLength: Int
+        val compressedStartInExtData: Int
+        
+        try {
+            if (isMessagePackInteger(firstByte)) {
+                val unpacker = MessagePack.newDefaultUnpacker(extData)
+                uncompressedLength = unpacker.unpackInt()
+                compressedStartInExtData = unpacker.totalReadBytes.toInt()
+            } else {
+                // Fallback for raw Little Endian length (e.g. when first byte is 0xC7)
+                uncompressedLength = readInt32LE(extData, 0)
+                compressedStartInExtData = 4
+            }
+        } catch (e: Exception) {
+            throw Exception("Header parse failed at byte 0x%02x: ${e.message}".format(firstByte))
+        }
+
+        val compressed = extData.copyOfRange(compressedStartInExtData, extData.size)
         return decompressBlock(compressed, uncompressedLength)
     }
 
@@ -352,8 +378,15 @@ class EldenBingoClient {
             offset = ext.dataStart + ext.dataLength
 
             val lengthPayload = payload.copyOfRange(ext.dataStart, ext.dataStart + ext.dataLength)
-            val uncompressedLength = MessagePack.newDefaultUnpacker(lengthPayload).use { unpacker ->
-                unpacker.unpackInt()
+            val firstByte = lengthPayload[0].toInt() and 0xFF
+            val uncompressedLength = try {
+                if (isMessagePackInteger(firstByte)) {
+                    MessagePack.newDefaultUnpacker(lengthPayload).use { it.unpackInt() }
+                } else {
+                    readInt32LE(lengthPayload, 0)
+                }
+            } catch (e: Exception) {
+                throw Exception("Array segment header parse failed at byte 0x%02x: ${e.message}".format(firstByte))
             }
 
             val bin = readBin(payload, offset) ?: return null
@@ -462,6 +495,19 @@ class EldenBingoClient {
                 (payload[offset + 3].toInt() and 0xFF)
     }
 
+    private fun readInt32LE(payload: ByteArray, offset: Int): Int {
+        return (payload[offset].toInt() and 0xFF) or
+                ((payload[offset + 1].toInt() and 0xFF) shl 8) or
+                ((payload[offset + 2].toInt() and 0xFF) shl 16) or
+                ((payload[offset + 3].toInt() and 0xFF) shl 24)
+    }
+
+    private fun isMessagePackInteger(code: Int): Boolean {
+        return code in 0x00..0x7F || code in 0xE0..0xFF || // fixint
+                code in 0xCC..0xCF || // uint 8, 16, 32, 64
+                code in 0xD0..0xD3    // int 8, 16, 32, 64
+    }
+
     private fun handleRegisterAccepted(unpacker: MessageUnpacker, objectCount: Int) {
         if (objectCount < 1) return
         unpacker.unpackString()
@@ -541,6 +587,8 @@ class EldenBingoClient {
             typeName.contains("ServerPromoteToAdmin") -> handlePromoteToAdmin(strMap)
             typeName.contains("ServerRoomNameSuggestion") -> handleRoomNameSuggestion(strMap)
             typeName.contains("ServerAdminStatusMessage") -> handleAdminStatusMessage(strMap)
+            typeName.contains("ServerMatchEvents") -> handleMatchEvents(strMap)
+            typeName.contains("ServerEntireMatchLogReceived") -> handleEntireMatchLogReceived(strMap)
         }
     }
 
@@ -610,6 +658,7 @@ class EldenBingoClient {
         if ((matchStatus == MatchStatus.Starting || matchStatus == MatchStatus.Preparation) &&
             (previousStatus == MatchStatus.NotRunning || previousStatus == MatchStatus.Finished)) {
             _bingoLines.value = emptyList()
+            _matchEvents.value = emptyList()
         }
 
         _roomState.value = _roomState.value.copy(matchStatus = matchStatus, paused = paused, timer = timer)
@@ -672,7 +721,6 @@ class EldenBingoClient {
     }
 
     private fun handleUserChecked(map: Map<String, Value>) {
-        val userGuidValue = map["UserGuid"]
         val index = map["Index"]?.asIntegerValue()?.asInt() ?: return
         val team = map["Team"]?.asIntegerValue()?.asInt() ?: return
         val teamsChecked = map["TeamsChecked"]?.asArrayValue()?.list()?.map { it.asIntegerValue().asInt() }?.toIntArray() ?: return
@@ -690,16 +738,6 @@ class EldenBingoClient {
 
         val board = _bingoBoard.value ?: return
         if (index in board.squares.indices) {
-            val square = board.squares[index]
-            if (isClaimed) {
-                // Find who claimed it using the UserGuid from the packet
-                val userGuid = parseGuid(userGuidValue)
-                val claimer = if (userGuid != null) _roomState.value.users.find { it.guid == userGuid } else null
-                val nick = claimer?.nick ?: "Team $team"
-                addSystemChatMessage("$nick claimed '${square.text}'")
-                _squareClaimEvents.tryEmit(SquareClaimEvent(nick, square.text, team))
-            }
-
             val newSquares = board.squares.toMutableList()
             newSquares[index] = newSquares[index].copy(team = teamsChecked)
             _bingoBoard.value = board.copy(squares = newSquares)
@@ -839,6 +877,71 @@ class EldenBingoClient {
     private fun handleAdminStatusMessage(map: Map<String, Value>) {
         val message = map["Message"]?.asStringValue()?.asString() ?: return
         _statusMessage.value = message
+    }
+
+    private fun handleMatchEvents(map: Map<String, Value>) {
+        val eventsArr = map["Events"]?.asArrayValue()?.list() ?: return
+        val newEvents = eventsArr.mapNotNull { parseMatchEvent(it) }
+        _matchEvents.value = _matchEvents.value + newEvents
+
+        // Log to chat for convenience
+        newEvents.forEach { event ->
+            val action = if (event.checked) "marked" else "unmarked"
+            val board = _bingoBoard.value
+            val squareText = if (event.squareIndex >= 0 && board != null && event.squareIndex < board.squares.size) {
+                "'${board.squares[event.squareIndex].text}'"
+            } else if (event.eventType == MatchEventType.Bingo) {
+                "BINGO!"
+            } else {
+                "square ${event.squareIndex}"
+            }
+
+            val message = if (event.eventType == MatchEventType.Bingo) {
+                "${event.player} achieved BINGO!"
+            } else {
+                "${event.player} $action $squareText"
+            }
+            addSystemChatMessage(message)
+
+            // Emit claim event for UI notifications
+            if (event.checked && (event.eventType == MatchEventType.PlayerCheck || event.eventType == MatchEventType.RefereeCheck)) {
+                val claimNick = if (event.eventType == MatchEventType.RefereeCheck) {
+                    "[REF] ${event.player}"
+                } else {
+                    event.player
+                }
+                _squareClaimEvents.tryEmit(SquareClaimEvent(claimNick, squareText.removeSurrounding("'"), event.team))
+            }
+        }
+    }
+
+    private fun parseMatchEvent(value: Value): MatchEvent? {
+        return try {
+            val map = value.asMapValue().map().mapKeys { it.key.asStringValue().asString() }
+            MatchEvent(
+                timestamp = map["Timestamp"]?.asIntegerValue()?.asInt() ?: 0,
+                squareIndex = map["SquareIndex"]?.asIntegerValue()?.asInt() ?: 0,
+                team = map["Team"]?.asIntegerValue()?.asInt() ?: -1,
+                player = map["Player"]?.asStringValue()?.asString() ?: "",
+                checked = map["Checked"]?.asBooleanValue()?.boolean ?: false,
+                eventType = MatchEventType.entries.getOrNull(map["EventType"]?.asIntegerValue()?.asInt() ?: 0) ?: MatchEventType.PlayerCheck
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun handleEntireMatchLogReceived(map: Map<String, Value>) {
+        val matchLog = map["MatchLog"]?.asStringValue()?.asString() ?: return
+        _matchLog.value = matchLog
+    }
+
+    // ---- Client Requests ----
+
+    fun requestMatchLog(json: Boolean = false) {
+        scope.launch {
+            sendObjectPacket(ClientRequestEntireMatchLog(json), PacketType.ObjectData)
+        }
     }
 
     // ---- Packet Sending ----
@@ -1207,6 +1310,10 @@ class EldenBingoClient {
 
     private fun strToUuid(str: String): UUID? {
         return try { UUID.fromString(str) } catch (_: Exception) { null }
+    }
+
+    private fun ByteArray.toHex(): String {
+        return joinToString("") { "%02x".format(it) }
     }
 
     fun clearStatus() {

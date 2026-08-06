@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -40,6 +41,7 @@ fun AdminScreen(
     gameSettings: BingoGameSettings?,
     matchStatus: MatchStatus,
     isPaused: Boolean,
+    matchLog: String? = null,
     onStartMatch: () -> Unit,
     onStopMatch: () -> Unit,
     onTogglePause: () -> Unit,
@@ -48,6 +50,7 @@ fun AdminScreen(
     onUploadBingoJson: (String) -> Unit,
     onBack: () -> Unit,
     onRequestSettings: () -> Unit = {},
+    onRequestMatchLog: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Local state initialized once or when settings are explicitly refreshed
@@ -442,6 +445,56 @@ fun AdminScreen(
                             if (!bingoJsonError.isNullOrBlank()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(bingoJsonError ?: "", color = Color.Red)
+                            }
+                        }
+                    }
+
+                    // Match Log Request
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2D2D)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Match Log", color = EldenGold, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { onRequestMatchLog(false) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Request TXT")
+                                }
+                                Button(
+                                    onClick = { onRequestMatchLog(true) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Request JSON")
+                                }
+                            }
+
+                            if (!matchLog.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1F1F1F)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 200.dp)
+                                ) {
+                                    Box(modifier = Modifier.padding(8.dp)) {
+                                        SelectionContainer {
+                                            Text(
+                                                text = matchLog,
+                                                color = Color.LightGray,
+                                                fontSize = 12.sp,
+                                                modifier = Modifier.verticalScroll(rememberScrollState())
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

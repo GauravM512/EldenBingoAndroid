@@ -54,7 +54,7 @@ data class ServerBingoAchievedUpdate(val bingo: BingoLine)
 
 data class ServerSquareUpdate(val square: BingoBoardSquare, val index: Int)
 
-data class ServerUserChecked(val userGuid: UUID, val index: Int, val team: Int, val teamsChecked: IntArray)
+data class ServerUserChecked(val index: Int, val team: Int, val teamsChecked: IntArray)
 
 data class ServerCurrentGameSettings(val gameSettings: BingoGameSettings)
 
@@ -67,6 +67,10 @@ data class ServerUserChangedTeam(val userGuid: UUID, val team: Int, val teamColo
 data class ServerUserBannedFromRoom(val user: UserInRoom, val banner: UserInRoom)
 
 data class ServerPromoteToAdmin(val user: UserInRoom, val promoter: UserInRoom)
+
+data class ServerMatchEvents(val events: List<MatchEvent>)
+
+data class ServerEntireMatchLogReceived(val matchLog: String, val suggestedFilename: String, val json: Boolean)
 
 // ---- Client -> Server Packets ----
 
@@ -124,6 +128,8 @@ data class ClientRequestTeamChange(val team: Int)
 data class ClientBanUserFromRoom(val bannedUser: UUID)
 
 data class ClientPromoteToAdmin(val promotedUser: UUID)
+
+data class ClientRequestEntireMatchLog(val json: Boolean)
 
 // ---- Neto Protocol Packets ----
 
