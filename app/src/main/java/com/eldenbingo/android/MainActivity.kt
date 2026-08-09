@@ -2,12 +2,15 @@ package com.eldenbingo.android
 
 import android.app.Activity
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,6 +51,7 @@ import com.eldenbingo.android.ui.screens.map.MapPreviewScreen
 import com.eldenbingo.android.ui.screens.scoreboard.ScoreboardScreen
 import com.eldenbingo.android.ui.theme.EldenBingoTheme
 import com.eldenbingo.android.viewmodel.GameViewModel
+import com.eldenbingo.android.service.EldenBingoService
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
@@ -99,6 +103,17 @@ fun EldenBingoMain(
     val isInRoom = roomState.name.isNotEmpty()
     var autoConnectAttempted by rememberSaveable { mutableStateOf(false) }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { }
+    )
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     LaunchedEffect(connectionState, autoConnectAttempted) {
         if (!autoConnectAttempted && connectionState is com.eldenbingo.android.data.network.EldenBingoClient.ConnectionState.Disconnected) {
             val prefs = context.getSharedPreferences("connect_inputs", Context.MODE_PRIVATE)
@@ -139,6 +154,15 @@ fun EldenBingoMain(
         if (statusMessage != null && connectionState !is com.eldenbingo.android.data.network.EldenBingoClient.ConnectionState.Error) {
             delay(4_000)
             viewModel.clearStatus()
+        }
+    }
+
+    LaunchedEffect(connectionState) {
+        if (connectionState is com.eldenbingo.android.data.network.EldenBingoClient.ConnectionState.Connected) {
+            EldenBingoService.start(context)
+        } else if (connectionState is com.eldenbingo.android.data.network.EldenBingoClient.ConnectionState.Disconnected ||
+            connectionState is com.eldenbingo.android.data.network.EldenBingoClient.ConnectionState.Error) {
+            EldenBingoService.stop(context)
         }
     }
 
