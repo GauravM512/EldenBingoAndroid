@@ -22,9 +22,12 @@ import com.eldenbingo.android.data.model.UserInRoom
 import com.eldenbingo.android.ui.theme.EldenGold
 import com.eldenbingo.android.ui.theme.TeamColors
 
+import androidx.compose.foundation.clickable
+
 @Composable
 fun UserListItem(
     user: UserInRoom,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val teamColor = when {
@@ -37,7 +40,8 @@ fun UserListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Color indicator

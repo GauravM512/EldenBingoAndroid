@@ -44,6 +44,7 @@ class EldenBingoClient {
         private set
     var localUser: UserInRoom? = null
         private set
+    var selectedSquareIndex: Int = -1
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -727,14 +728,24 @@ class EldenBingoClient {
 
         val isClaimed = teamsChecked.contains(team)
         val isOwnTeam = team == localUser?.team
-        _soundEvents.tryEmit(
-            when {
-                isClaimed && isOwnTeam -> GameSound.SquareClaimedOwn
-                isClaimed -> GameSound.SquareClaimedOther
-                isOwnTeam -> GameSound.SquareUnclaimedOwn
-                else -> GameSound.SquareUnclaimedOther
+        val isSpectator = localUser?.isSpectator == true
+
+        if (isClaimed) {
+            if (isOwnTeam) {
+                _soundEvents.tryEmit(GameSound.SquareClaimedOwn)
+            } else {
+                if (!isSpectator && index == selectedSquareIndex) {
+                    _soundEvents.tryEmit(GameSound.SquareSniped)
+                }
+                _soundEvents.tryEmit(GameSound.SquareClaimedOther)
             }
-        )
+        } else {
+            if (isOwnTeam) {
+                _soundEvents.tryEmit(GameSound.SquareUnclaimedOwn)
+            } else {
+                _soundEvents.tryEmit(GameSound.SquareUnclaimedOther)
+            }
+        }
 
         val board = _bingoBoard.value ?: return
         if (index in board.squares.indices) {
@@ -1011,6 +1022,18 @@ class EldenBingoClient {
 
     suspend fun sendBingoJson(json: String) {
         sendObjectPacket(ClientBingoJson(json), PacketType.ObjectData)
+    }
+
+    suspend fun setTeamName(team: Int, name: String) {
+        sendObjectPacket(ClientSetTeamName(team, name), PacketType.ObjectData)
+    }
+
+    suspend fun banUser(bannedUser: UUID) {
+        sendObjectPacket(ClientBanUserFromRoom(bannedUser), PacketType.ObjectData)
+    }
+
+    suspend fun promoteToAdmin(promotedUser: UUID) {
+        sendObjectPacket(ClientPromoteToAdmin(promotedUser), PacketType.ObjectData)
     }
 
     // ---- Low-level Packet I/O ----

@@ -22,6 +22,7 @@ import com.eldenbingo.android.data.model.*
 import com.eldenbingo.android.ui.components.UserListItem
 import com.eldenbingo.android.ui.theme.EldenGold
 import com.eldenbingo.android.ui.theme.TeamColors
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +37,9 @@ fun LobbyScreen(
     matchStatusString: String,
     onLeaveRoom: () -> Unit,
     onChangeTeam: (Int) -> Unit,
+    onSetTeamName: (Int, String) -> Unit = { _, _ -> },
+    onBanUser: (UUID) -> Unit = {},
+    onPromoteToAdmin: (UUID) -> Unit = {},
     onTogglePause: () -> Unit,
     onStartMatch: () -> Unit,
     onStopMatch: () -> Unit,
@@ -47,6 +51,8 @@ fun LobbyScreen(
 ) {
     val isAdmin = localUser?.isAdmin == true
     var showTeamDialog by remember { mutableStateOf(false) }
+    var showSetTeamNameDialog by remember { mutableStateOf(false) }
+    var selectedUserForAdminAction by remember { mutableStateOf<UserInRoom?>(null) }
     val isMatchRunning = roomState.matchStatus == MatchStatus.Running ||
             roomState.matchStatus == MatchStatus.Starting ||
             roomState.matchStatus == MatchStatus.Preparation
@@ -151,7 +157,13 @@ fun LobbyScreen(
                     onClick = { showTeamDialog = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Change Team", fontSize = 14.sp, color = EldenGold)
+                    Text("Change Team", fontSize = 13.sp, color = EldenGold)
+                }
+                OutlinedButton(
+                    onClick = { showSetTeamNameDialog = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Team Name", fontSize = 13.sp, color = EldenGold)
                 }
             }
         } else {
@@ -166,7 +178,13 @@ fun LobbyScreen(
                     onClick = { showTeamDialog = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Change Team", fontSize = 14.sp, color = EldenGold)
+                    Text("Change Team", fontSize = 13.sp, color = EldenGold)
+                }
+                OutlinedButton(
+                    onClick = { showSetTeamNameDialog = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Team Name", fontSize = 13.sp, color = EldenGold)
                 }
             }
         }
@@ -198,7 +216,12 @@ fun LobbyScreen(
                             .verticalScroll(rememberScrollState())
                     ) {
                         roomState.users.forEach { user ->
-                            UserListItem(user = user)
+                            UserListItem(
+                                user = user,
+                                onClick = if (isAdmin && user.guid != localUser.guid) {
+                                    { selectedUserForAdminAction = user }
+                                } else null
+                            )
                         }
                     }
                 }
@@ -421,6 +444,124 @@ fun LobbyScreen(
             }
         )
     }
+
+    if (showSetTeamNameDialog) {
+        SetTeamNameDialog(
+            currentTeam = localUser?.team ?: 0,
+            onDismiss = { showSetTeamNameDialog = false },
+            onConfirm = { team, name ->
+                showSetTeamNameDialog = false
+                onSetTeamName(team, name)
+            }
+        )
+    }
+
+    val targetUser = selectedUserForAdminAction
+    if (targetUser != null) {
+        UserActionDialog(
+            user = targetUser,
+            onDismiss = { selectedUserForAdminAction = null },
+            onPromote = {
+                selectedUserForAdminAction = null
+                onPromoteToAdmin(targetUser.guid)
+            },
+            onBan = {
+                selectedUserForAdminAction = null
+                onBanUser(targetUser.guid)
+            }
+        )
+    }
+}
+
+@Composable
+private fun SetTeamNameDialog(
+    currentTeam: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int, String) -> Unit
+) {
+    var teamNameText by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Set Team Name", color = EldenGold, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Enter custom name for ${BingoConstants.getTeamName(currentTeam)}:",
+                    color = Color.White,
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = teamNameText,
+                    onValueChange = { teamNameText = it },
+                    label = { Text("Team Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(currentTeam, teamNameText) },
+                enabled = teamNameText.isNotBlank()
+            ) {
+                Text("Save", color = EldenGold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        },
+        containerColor = Color(0xFF2D2D2D)
+    )
+}
+
+@Composable
+private fun UserActionDialog(
+    user: UserInRoom,
+    onDismiss: () -> Unit,
+    onPromote: () -> Unit,
+    onBan: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("Admin Action: ${user.nick}", color = EldenGold, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (!user.isAdmin) {
+                    Button(
+                        onClick = onPromote,
+                        colors = ButtonDefaults.buttonColors(containerColor = EldenGold),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Promote to Admin", color = Color.Black)
+                    }
+                }
+                Button(
+                    onClick = onBan,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Ban from Room", color = Color.White)
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.Gray)
+            }
+        },
+        containerColor = Color(0xFF2D2D2D)
+    )
 }
 
 @Composable

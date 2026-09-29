@@ -1,5 +1,6 @@
 package com.eldenbingo.android.data.model
 
+import androidx.compose.ui.graphics.Color
 import java.util.UUID
 
 // ---- Enums ----
@@ -13,7 +14,7 @@ enum class MapInstance {
 }
 
 enum class EldenRingClasses {
-    Vagabond, Warrior, Hero, Bandit, Astrologer, Prophet, Samurai, Prisoner, Confessor, Wretch
+    Vagabond, Warrior, Hero, Bandit, Astrologer, Prophet, Samurai, Prisoner, Confessor, Wretch, IdusKnight, HeavyKnight
 }
 
 enum class MatchEventType {
@@ -166,6 +167,21 @@ object BingoConstants {
         TeamColor(0xFFED73D8, "Pink"),
         TeamColor(0xFF835016, "Brown"),
         TeamColor(0xFFD7C300, "Yellow")
+    )
+
+    val CLASS_COLORS = listOf(
+        Color(0xFF2A8DA6),
+        androidx.compose.ui.graphics.Color(0xFF2C61B2),
+        androidx.compose.ui.graphics.Color(0xFF9E2B25),
+        androidx.compose.ui.graphics.Color(0xFF134F1E),
+        androidx.compose.ui.graphics.Color(0xFFAB6720),
+        androidx.compose.ui.graphics.Color(0xFFCBB186),
+        androidx.compose.ui.graphics.Color(0xFFB1492C),
+        androidx.compose.ui.graphics.Color(0xFF969696),
+        androidx.compose.ui.graphics.Color(0xFF8C35B9),
+        androidx.compose.ui.graphics.Color(0xFFCCCCCC),
+        androidx.compose.ui.graphics.Color(0xFF3A8250),
+        androidx.compose.ui.graphics.Color(0xFF686868)
     )
 
     fun getTeamColor(team: Int): Long {
