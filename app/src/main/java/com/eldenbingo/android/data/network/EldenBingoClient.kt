@@ -106,7 +106,7 @@ class EldenBingoClient {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     companion object {
-        private const val VERSION = "0.18.0"
+        private const val VERSION = "0.19.0"
         private const val SERVER_REGISTER_STRING = "neto server"
         private const val CLIENT_REGISTER_STRING = "hello"
         private const val KEEP_ALIVE_TIMEOUT_MS = 15000L
