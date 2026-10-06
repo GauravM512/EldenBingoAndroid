@@ -12,6 +12,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -216,9 +219,10 @@ private fun FittingSquareText(
     }
     var fontSize by remember(text, boardSize) { mutableStateOf(maxFontSize) }
     var ready by remember(text, boardSize) { mutableStateOf(false) }
+    val annotatedText = remember(text, color) { highlightKeywords(text, color) }
 
     Text(
-        text = text,
+        text = annotatedText,
         color = color.copy(alpha = if (ready) 1f else 0f),
         fontSize = fontSize,
         fontWeight = FontWeight.Medium,
@@ -235,4 +239,40 @@ private fun FittingSquareText(
         },
         modifier = modifier.fillMaxWidth()
     )
+}
+
+private fun highlightKeywords(text: String, defaultColor: Color): AnnotatedString {
+    val keywordCategories = listOf(
+        // Bosses & Major Enemies (Red/Pink)
+        listOf("Margit", "Godrick", "Rennala", "Radahn", "Rykard", "Morgott", "Fire Giant", "Godskin", "Maliketh", "Gideon", "Godfrey", "Radagon", "Elden Beast", "Malenia", "Mohg", "Placidusax", "Astel", "Fortissax", "Commander", "Crucible", "Tree Sentinel", "Night's Cavalry", "Bell Bearing", "Gargoyle", "Magma Wyrm", "Dragon", "Avatar", "Messmer", "Romina", "Rellana", "Bayle", "Midra", "Metyr") to Color(0xFFFF8A80),
+        // Items & Gear (Light Blue)
+        listOf("Staff", "Seal", "Sword", "Greatsword", "Katana", "Dagger", "Bow", "Shield", "Armor", "Talisman", "Ashes", "Ash of War", "Spell", "Incantation", "Sorcery", "Tear", "Flask", "Crystal", "Rune", "Remembrance", "Sacred Tear", "Golden Seed") to Color(0xFF80D8FF),
+        // Locations & Regions (Light Green)
+        listOf("Limgrave", "Liurnia", "Caelid", "Altus", "Leyndell", "Mt. Gelmir", "Mountaintops", "Farum Azula", "Nokron", "Nokstella", "Deeproot", "Elphael", "Mohgwyn", "Gravesite", "Scadu", "Shadow Keep", "Belurat", "Enir-Ilim") to Color(0xFFB9F6CA),
+        // Actions & Objectives (Light Gold/Orange)
+        listOf("Defeat", "Kill", "Obtain", "Collect", "Craft", "Upgrade", "Reach", "Unlock", "Enter", "Clear", "Use", "Cast") to Color(0xFFFFD180)
+    )
+
+    return buildAnnotatedString {
+        append(text)
+        addStyle(style = SpanStyle(color = defaultColor), start = 0, end = text.length)
+        val lowerText = text.lowercase()
+        keywordCategories.forEach { (words, color) ->
+            words.forEach { word ->
+                var start = 0
+                val wordLower = word.lowercase()
+                while (start < lowerText.length) {
+                    val index = lowerText.indexOf(wordLower, start)
+                    if (index == -1) break
+                    val end = index + wordLower.length
+                    addStyle(
+                        style = SpanStyle(color = color, fontWeight = FontWeight.Bold),
+                        start = index,
+                        end = end
+                    )
+                    start = end
+                }
+            }
+        }
+    }
 }

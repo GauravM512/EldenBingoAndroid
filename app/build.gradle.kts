@@ -6,9 +6,9 @@ plugins {
 
 object AppVersion {
     const val MAJOR = 1
-    const val MINOR = 1
-    const val PATCH = 1
-    const val BUILD = 2
+    const val MINOR = 2
+    const val PATCH = 0
+    const val BUILD = 0
 
     const val VERSION_NAME = "$MAJOR.$MINOR.$PATCH"
     const val VERSION_CODE = MAJOR * 1000000 +

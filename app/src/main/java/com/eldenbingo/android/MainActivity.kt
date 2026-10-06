@@ -238,6 +238,9 @@ fun EldenBingoMain(
                         }
                     },
                     onChangeTeam = { team -> viewModel.requestTeamChange(team) },
+                    onSetTeamName = { team, name -> viewModel.setTeamName(team, name) },
+                    onBanUser = { userGuid -> viewModel.banUser(userGuid) },
+                    onPromoteToAdmin = { userGuid -> viewModel.promoteToAdmin(userGuid) },
                     onTogglePause = { viewModel.togglePause() },
                     onStartMatch = { viewModel.changeMatchStatus(MatchStatus.Starting) },
                     onStopMatch = { viewModel.changeMatchStatus(MatchStatus.Finished) },
@@ -255,9 +258,18 @@ fun EldenBingoMain(
                     matchStatus = roomState.matchStatus,
                     localTeam = localUser?.team ?: 0,
                     squareClaimEvents = viewModel.squareClaimEvents,
-                    onCheck = { viewModel.tryCheck(it) },
-                    onMark = { viewModel.tryMark(it) },
-                    onCounterChange = { index, change -> viewModel.trySetCounter(index, change) },
+                    onCheck = {
+                        viewModel.setSelectedSquare(it)
+                        viewModel.tryCheck(it)
+                    },
+                    onMark = {
+                        viewModel.setSelectedSquare(it)
+                        viewModel.tryMark(it)
+                    },
+                    onCounterChange = { index, change ->
+                        viewModel.setSelectedSquare(index)
+                        viewModel.trySetCounter(index, change)
+                    },
                     onBack = { navController.popBackStack() },
                     onRandomize = { viewModel.randomizeBoard() },
                     isAdmin = localUser?.isAdmin == true

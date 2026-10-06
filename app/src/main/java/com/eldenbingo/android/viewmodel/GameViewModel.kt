@@ -222,6 +222,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { client.randomizeBoard() }
     }
 
+    fun setSelectedSquare(index: Int) {
+        client.selectedSquareIndex = index
+    }
+
+    fun setTeamName(team: Int, name: String) {
+        viewModelScope.launch { client.setTeamName(team, name) }
+    }
+
+    fun banUser(userGuid: UUID) {
+        viewModelScope.launch { client.banUser(userGuid) }
+    }
+
+    fun promoteToAdmin(userGuid: UUID) {
+        viewModelScope.launch { client.promoteToAdmin(userGuid) }
+    }
+
     fun clearStatus() {
         client.clearStatus()
     }
